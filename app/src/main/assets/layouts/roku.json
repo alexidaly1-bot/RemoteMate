@@ -1,0 +1,10 @@
+{"name":"Roku","brand":"roku","rows":[
+  {"type":"keys","items":["MUTE","grip","POWER"]},
+  {"type":"apps","items":[
+    {"name":"Netflix","roku":"12","googletv":"market://launch?id=com.netflix.ninja"},
+    {"name":"YouTube","roku":"837","googletv":"market://launch?id=com.google.android.youtube.tv"},
+    {"name":"Prime Video","roku":"13","googletv":"market://launch?id=com.amazon.amazonvideo.livingroom"}]},
+  {"type":"keys","items":["BACK","HOME","INFO","REPLAY","PLAY_PAUSE","KEYBOARD","MIC","VOLUME","LIVE_TV","REWIND","FFWD"]},
+  {"type":"touchpad"},
+  {"type":"keys","items":["HDMI1","HDMI2","HDMI3"]}
+]}

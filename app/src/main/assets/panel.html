@@ -1,0 +1,526 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=300, user-scalable=no">
+<title>RemoteMate</title>
+<style>
+/* One dark remote body, 300 units wide, scaled by the app to a fixed pixel width.
+   The rows come from a layout JSON (assets/layouts/*.json or "My layout"). Thin line icons throughout. */
+:root{
+  --body:#1f2223; --key:#353839; --key-hi:#45494a; --key-lo:#2b2e2f; --ink:#f4f4f2; --muted:#9a9d9e;
+  --light:#a9aaae; --light-hi:#c9cace; --red:#f0284a; --pad:#3a3c3d; --pad-lo:#323435; --pill:#ffffff; --pill-ink:#141414;
+  --ok:#3ccf6e; --warn:#f2b33d; --bad:#f0284a; --icon:1.6;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:none}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:"Roboto","Helvetica Neue",Arial,sans-serif}
+.remote{position:absolute;inset:0;background:var(--body);border-radius:30px;padding:46px 22px 34px;display:flex;flex-direction:column;gap:11px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+#rows{display:contents}
+.keys{display:grid;grid-template-columns:70px 1fr 70px;grid-auto-rows:70px;row-gap:11px;align-items:center;justify-items:center;flex:none}
+.key{width:70px;height:70px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;color:var(--ink);position:relative;
+  background:radial-gradient(circle at 50% 35%,var(--key-hi),var(--key) 55%,var(--key-lo));
+  box-shadow:0 2px 3px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .08s,filter .08s}
+.key svg{width:47px;height:47px}
+.key.light{background:radial-gradient(circle at 50% 30%,var(--light-hi),var(--light) 60%,#8b8c90);color:#fff}
+.key.light svg{filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.key.txt{font-weight:600;font-size:27px;letter-spacing:.3px}
+.key.txt.small{font-size:21px}
+.key.txt.tiny{font-size:15px;line-height:1.05;text-align:center}
+.key.down,.rocker button.down,.pill.down{transform:scale(.93);filter:brightness(1.25)}
+.spacer{width:70px;height:70px}
+.rocker{width:70px;height:151px;border-radius:35px;overflow:hidden;display:flex;flex-direction:column;grid-row:span 2;position:relative;
+  background:var(--key);box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.rocker-wrap{position:relative;grid-row:span 2;display:grid;place-items:center}
+.rocker button{flex:1;border:0;background:radial-gradient(circle at 50% 40%,var(--key-hi),var(--key) 60%,var(--key-lo));color:var(--ink);display:grid;place-items:center;transition:transform .08s,filter .08s;font-weight:600;font-size:24px}
+.rocker button+button{border-top:2px solid var(--body)}
+.rocker svg{width:40px;height:40px}
+.grip{width:100%;height:70px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative}
+.grip i{width:6px;height:6px;border-radius:50%;background:#55595a}
+.grip i.st{width:8px;height:8px;background:var(--muted)}
+.grip.ok i.st{background:var(--ok)} .grip.busy i.st{background:var(--warn);animation:pulse 1s infinite} .grip.bad i.st{background:var(--bad)}
+@keyframes pulse{50%{opacity:.35}}
+.pad{flex:1;min-height:120px;margin:0 -7px;border-radius:12px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,var(--pad),var(--pad-lo) 50%,var(--pad));box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 -1px 0 rgba(0,0,0,.3)}
+.dot{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#e0e0e3,#a2a3a8 70%);box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .18s ease-out}
+.dot.live{transition:none}
+.ripple{position:absolute;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none;animation:rip .35s ease-out forwards}
+@keyframes rip{from{transform:scale(.3);opacity:1}to{transform:scale(1.4);opacity:0}}
+.banner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:14px;
+  background:rgba(31,34,35,.86);color:var(--ink);font-size:15px;line-height:1.35;z-index:2}
+.banner.floating{inset:auto 14px 14px 14px;border-radius:16px;background:rgba(43,46,47,.96)}
+.banner small{color:var(--muted);font-size:13px}
+.banner button{border:0;border-radius:18px;padding:9px 16px;font-size:14px;font-weight:700;background:var(--ink);color:#1f2223;touch-action:manipulation}
+.pills{display:flex;flex-direction:column;gap:11px;margin:2px 0 4px;flex:none}
+.pill{height:52px;border:0;border-radius:12px;background:#2b2e2f;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:10px;position:relative;
+  font-size:20px;font-weight:600;letter-spacing:.2px;box-shadow:0 2px 3px rgba(0,0,0,.35),inset 0 0 0 1.5px #55595a;transition:transform .08s,filter .08s}
+.pill.st{background:#fff;color:#111;font-family:"Roboto Condensed","Arial Narrow",sans-serif;font-size:27px;font-weight:800;letter-spacing:-.3px;gap:3px;box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.pill.st .tag{background:#e62a2f;color:#fff;border-radius:11px;padding:1px 7px 2px}
+.pill.pr{background:#6fcbec;color:#fff;font-size:26px;font-weight:800;gap:6px;box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.pill.pr span{font-size:18px;font-weight:600;opacity:.9}
+.pill.bh{background:#0b137a;color:#fff;font-family:"Roboto Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:25px;gap:9px;box-shadow:0 2px 3px rgba(0,0,0,.35)}
+.pill.bh svg{width:30px;height:30px;padding:3px;border-radius:8px;background:linear-gradient(135deg,#3f8cff,#1c49e0);stroke:#fff}
+.bubble{position:absolute;left:50%;top:0;transform:translate(-50%,-115%);background:var(--ink);color:#1f2223;font-weight:800;font-size:14px;border-radius:12px;padding:4px 9px;
+  white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3}
+.bubble.on{opacity:1}
+.listening{animation:glow 1.1s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
+/* sheets (menu, typing, editor pickers) */
+.sheet{position:absolute;left:10px;right:10px;top:10px;max-height:calc(100% - 20px);overflow-y:auto;touch-action:pan-y;background:#2b2e2f;border-radius:22px;padding:14px;color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;gap:8px;z-index:8}
+.sheet *{touch-action:pan-y}
+.sheet[hidden]{display:none}
+.sheet h3{margin:2px 4px 4px;font-size:16px;font-weight:700}
+.sheet .item{border:0;background:#3a3d3e;color:var(--ink);border-radius:14px;padding:13px 14px;font-size:16px;text-align:left;display:flex;gap:12px;align-items:center}
+.sheet .item svg{width:22px;height:22px;flex:none}
+.sheet .item.on{box-shadow:inset 0 0 0 2px var(--ok)}
+.sheet input{width:100%;font-size:17px;padding:12px;border-radius:12px;border:2px solid #55595a;background:#1f2223;color:var(--ink);user-select:text;-webkit-user-select:text;touch-action:auto}
+.sheet input:focus{outline:none;border-color:var(--ink)}
+.sheet .btns{display:flex;gap:8px}
+.sheet .btns button{flex:1;border:0;border-radius:12px;padding:12px 6px;font-size:15px;font-weight:700;background:#3a3d3e;color:var(--ink)}
+.sheet .btns .go{background:var(--ink);color:#1f2223}
+.sheet .note{font-size:13px;color:var(--muted);margin:0 4px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chip{border:0;background:#3a3d3e;color:var(--ink);border-radius:14px;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;line-height:1.1;text-align:center}
+.chip .ic{width:30px;height:30px;display:grid;place-items:center;font-weight:600;font-size:15px}
+.chip .ic svg{width:26px;height:26px}
+.toast{position:absolute;left:14px;right:14px;bottom:16px;background:var(--ink);color:#1f2223;border-radius:14px;padding:10px 12px;font-size:14px;text-align:center;
+  opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+svg{stroke-linecap:round;stroke-linejoin:round}
+svg:not([fill]){fill:none}
+svg:not([stroke]){stroke:currentColor}
+svg:not([stroke-width]){stroke-width:var(--icon)}
+[hidden]{display:none!important}
+/* edit mode: hold to move, ✕ to remove, + to add */
+.editbar{position:absolute;left:14px;right:14px;top:8px;height:32px;display:none;gap:6px;z-index:7}
+.editing .editbar{display:flex}
+.editbar button{border:0;border-radius:16px;padding:0 12px;font-size:13px;font-weight:700;background:#3a3d3e;color:var(--ink);touch-action:manipulation}
+.editbar .go{background:var(--ink);color:#1f2223;margin-left:auto}
+.editing{overflow-y:auto;touch-action:pan-y}
+.editing #rows>*{touch-action:pan-y}
+.editing .key,.editing .pill,.editing .rocker-wrap,.editing .grip,.editing .spacer,.editing .pad{touch-action:none}
+.editing .spacer{border:1.5px dashed #55595a;border-radius:50%}
+.editing .key,.editing .pill,.editing .rocker,.editing .grip{animation:wob .9s ease-in-out infinite alternate}
+@keyframes wob{from{transform:rotate(-1.2deg)}to{transform:rotate(1.2deg)}}
+.x{position:absolute;right:-4px;top:-4px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#1f2223;border:0;padding:0;display:grid;place-items:center;
+  font-size:15px;font-weight:800;line-height:1;z-index:4;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.pad .x{right:8px;top:8px}
+.add{width:70px;height:70px;border-radius:50%;border:1.5px dashed #6a6e6f;background:transparent;color:var(--muted);display:grid;place-items:center;font-size:30px;font-weight:300}
+.pills .add{width:100%;height:44px;border-radius:12px}
+.addrow{border:1.5px dashed #6a6e6f;background:transparent;color:var(--muted);border-radius:14px;padding:12px;font-size:15px;font-weight:600;flex:none}
+.lifted{opacity:.25}
+.ghost{position:fixed;pointer-events:none;z-index:20;opacity:.9;transform:scale(1.08)}
+.drop-before{box-shadow:-6px 0 0 -2px var(--ok)!important}
+.drop-after{box-shadow:6px 0 0 -2px var(--ok)!important}
+.pills .drop-before{box-shadow:0 -5px 0 -1px var(--ok)!important}
+.pills .drop-after{box-shadow:0 5px 0 -1px var(--ok)!important}
+.win body{background:#121314}
+.win .remote{position:absolute}
+</style></head>
+<body>
+<div class="remote" id="remote">
+  <div class="editbar"><button id="eLayouts">Layouts</button><button id="eCancel">Cancel</button><button class="go" id="eDone">Done</button></div>
+  <div id="rows"></div>
+
+  <div class="sheet" id="menu" hidden>
+    <button class="item" data-m="type"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M7 14.5h10"/></svg>Type on TV</button>
+    <button class="item" data-m="edit"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Edit buttons</button>
+    <button class="item" data-m="layouts"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16"/></svg>Layouts</button>
+    <button class="item" data-m="reconnect"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4.5h-4.5"/></svg>Reconnect</button>
+    <button class="item" data-m="setup"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>TVs &amp; settings</button>
+    <button class="item" data-m="hide"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>Hide remote</button>
+  </div>
+  <div class="sheet" id="typer" hidden>
+    <h3 id="typeLabel">Type on TV</h3>
+    <input id="typeIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search or type…" enterkeyhint="send">
+    <div class="btns"><button id="tDel">⌫</button><button id="tClose">Close</button><button class="go" id="tSend">Send</button></div>
+    <p class="note">Select a search box on the TV first.</p>
+  </div>
+  <div class="sheet" id="layoutSheet" hidden><h3>Layouts</h3><div id="layoutList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="btns"><button id="lClose">Close</button></div></div>
+  <div class="sheet" id="picker" hidden><h3 id="pickTitle">Add a button</h3><div id="pickBody" style="display:flex;flex-direction:column;gap:10px"></div>
+    <div class="btns"><button id="pClose">Close</button></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+(function(){
+const WIN=!!(window.Remote&&window.Remote.mode&&window.Remote.mode()==='window');
+const R=window.Remote||{};
+const $=s=>document.querySelector(s);
+const SHORT=3,START_LONG=1,END_LONG=2;
+const send=(b,d)=>R.press(b,d===undefined?SHORT:d);
+let toastT;
+function toast(m,ms){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms||2200)}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- button catalogue: generic name → look. Thin line icons (stroke 1.6). ---------- */
+const S=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;
+const ARROW={UP:'M6 15l6-6 6 6',DOWN:'M6 9l6 6 6-6',LEFT:'M15 6l-6 6 6 6',RIGHT:'M9 6l6 6-6 6'};
+const CAT={
+  POWER:{n:'Power',i:'<svg viewBox="0 0 24 24" style="color:var(--red)" stroke-width="2"><path d="M12 3.5v8"/><path d="M7.2 6.6a7.5 7.5 0 1 0 9.6 0"/></svg>'},
+  MUTE:{n:'Mute',i:S('<path d="M3.5 9.5h3.2L11.5 5.5v13l-4.8-4H3.5z"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>')},
+  VOL_UP:{n:'Volume +',i:S('<path d="M12 5v14M5 12h14"/>'),rep:1},
+  VOL_DOWN:{n:'Volume −',i:S('<path d="M6 12h12"/>'),rep:1},
+  CH_UP:{n:'Channel +',t:'P+',rep:1}, CH_DOWN:{n:'Channel −',t:'P−',rep:1},
+  INPUT:{n:'Input',i:S('<path d="M8.5 6.5V4.5h11v15h-11v-2"/><path d="M3.5 12h10M10.5 9l3 3-3 3"/>')},
+  USB:{n:'USB',t:'USB',c:'small'},
+  HDMI1:{n:'HDMI 1',t:'HDMI<br>1',c:'tiny'},HDMI2:{n:'HDMI 2',t:'HDMI<br>2',c:'tiny'},HDMI3:{n:'HDMI 3',t:'HDMI<br>3',c:'tiny'},HDMI4:{n:'HDMI 4',t:'HDMI<br>4',c:'tiny'},
+  LIVE_TV:{n:'Live TV',i:S('<rect x="3.5" y="7.5" width="17" height="12.5" rx="1.4"/><path d="M8.5 3.2l3.5 4.1 3.5-4.1"/>')},
+  UP:{n:'Up',i:S(`<path d="${ARROW.UP}"/>`),rep:1},DOWN:{n:'Down',i:S(`<path d="${ARROW.DOWN}"/>`),rep:1},
+  LEFT:{n:'Left',i:S(`<path d="${ARROW.LEFT}"/>`),rep:1},RIGHT:{n:'Right',i:S(`<path d="${ARROW.RIGHT}"/>`),rep:1},
+  OK:{n:'OK',t:'OK',c:'small'},
+  BACK:{n:'Back',i:S('<path d="M20.5 12H4.5M10 6.5L4.5 12l5.5 5.5"/>')},
+  HOME:{n:'Home',c:'light',i:S('<path d="M3.8 11.4 12 4.2l8.2 7.2"/><path d="M6.2 9.6v10.2h4.4v-5.6h2.8v5.6h4.4V9.6"/>')},
+  SETTINGS:{n:'Settings',i:'<svg viewBox="0 0 24 24" stroke-width="1.3"><path d="M19.45 10.49 L22.11 10.68 L22.11 13.32 L19.45 13.51 L18.33 16.20 L20.09 18.22 L18.22 20.09 L16.20 18.33 L13.51 19.45 L13.32 22.11 L10.68 22.11 L10.49 19.45 L7.80 18.33 L5.78 20.09 L3.91 18.22 L5.67 16.20 L4.55 13.51 L1.89 13.32 L1.89 10.68 L4.55 10.49 L5.67 7.80 L3.91 5.78 L5.78 3.91 L7.80 5.67 L10.49 4.55 L10.68 1.89 L13.32 1.89 L13.51 4.55 L16.20 5.67 L18.22 3.91 L20.09 5.78 L18.33 7.80Z"/><circle cx="12" cy="12" r="3.3"/></svg>'},
+  PROFILE:{n:'Profile',i:S('<circle cx="12" cy="8" r="3.8"/><path d="M4.8 20.2c0-4.2 3.2-7 7.2-7s7.2 2.8 7.2 7"/>')},
+  GUIDE:{n:'Guide',i:S('<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9.5h17M9 9.5v10"/>')},
+  INFO:{n:'Info / options',i:S('<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h.01"/>')},
+  MENU:{n:'Menu',i:S('<path d="M4.5 7h15M4.5 12h15M4.5 17h15"/>')},
+  APPS:{n:'All apps',i:S('<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>')},
+  PLAY_PAUSE:{n:'Play / pause',i:S('<path d="M3.5 6.5v11l7.5-5.5z"/><path d="M15 6.5v11M19.5 6.5v11"/>')},
+  PLAY:{n:'Play',i:S('<path d="M7.5 5.5v13l10-6.5z"/>')},
+  PAUSE:{n:'Pause',i:S('<path d="M9 5.5v13M15 5.5v13"/>')},
+  STOP:{n:'Stop',i:S('<rect x="6" y="6" width="12" height="12" rx="1.5"/>')},
+  REWIND:{n:'Rewind',i:S('<path d="M11.5 6.5v11L4 12zM20 6.5v11L12.5 12z"/>'),rep:1},
+  FFWD:{n:'Fast forward',i:S('<path d="M4 6.5v11l7.5-5.5zM12.5 6.5v11L20 12z"/>'),rep:1},
+  PREV:{n:'Previous',i:S('<path d="M6 6v12"/><path d="M18 6v12l-9-6z"/>')},
+  NEXT:{n:'Next',i:S('<path d="M18 6v12"/><path d="M6 6v12l9-6z"/>')},
+  REPLAY:{n:'Replay',i:S('<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>')},
+  SEARCH:{n:'Search',i:S('<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/>')},
+  CAPTIONS:{n:'Subtitles',i:S('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M10.5 10.2a2.3 2.3 0 1 0 0 3.6M17 10.2a2.3 2.3 0 1 0 0 3.6"/>')},
+  RED:{n:'Red',i:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.5" fill="#e53935" stroke="none"/></svg>'},
+  GREEN:{n:'Green',i:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.5" fill="#43a047" stroke="none"/></svg>'},
+  YELLOW:{n:'Yellow',i:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.5" fill="#fdd835" stroke="none"/></svg>'},
+  BLUE:{n:'Blue',i:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5.5" fill="#1e88e5" stroke="none"/></svg>'},
+  DEL:{n:'Backspace',i:S('<path d="M8.5 5.5h11a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5h-11L3 12z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5"/>'),rep:1},
+  ENTER:{n:'Enter',i:S('<path d="M19.5 5.5v6a3 3 0 0 1-3 3H5"/><path d="M9 10.5l-4 4 4 4"/>')},
+  FIND_REMOTE:{n:'Find remote',i:S('<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5h4"/>')},
+  // special items (not TV keys)
+  MIC:{n:'Voice',c:'light',sp:1,i:S('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.8 11a6.2 6.2 0 0 0 12.4 0M12 17.2v3.3M9 20.5h6"/>')},
+  KEYBOARD:{n:'Keyboard',sp:1,i:S('<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M7 14.5h10"/>')},
+  VOLUME:{n:'Volume rocker',sp:1,i:S('<rect x="8" y="2.5" width="8" height="19" rx="4"/><path d="M12 6v4M10 8h4M10 16h4"/>')},
+  CHANNEL:{n:'Channel rocker',sp:1,i:S('<rect x="8" y="2.5" width="8" height="19" rx="4"/><path d="M10 8l2-2 2 2M10 16l2 2 2-2"/>')},
+  _:{n:'Blank space',sp:1,i:S('<rect x="5" y="5" width="14" height="14" rx="7" stroke-dasharray="2 2.5"/>')},
+};
+for(let d=0;d<10;d++)CAT['NUM_'+d]={n:'Number '+d,t:''+d};
+const PILL={
+  st:'<b class="tag">Smart</b><b>Tube</b>',
+  pr:'<b>prime</b><span>video</span>',
+  bh:'<svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.6 3.6 5.4 3.6 8.5s-1.2 5.9-3.6 8.5c-2.4-2.6-3.6-5.4-3.6-8.5s1.2-5.9 3.6-8.5z"/></svg>BrowseHere'
+};
+
+/* ---------- state ---------- */
+let L={rows:[]},BRAND='googletv',SUP=[],editing=false,lastState=['offline',''];
+function loadLayout(json){
+  try{L=JSON.parse(json)}catch(e){L={rows:[]}}
+  if(!Array.isArray(L.rows))L.rows=[];
+  // the grip (menu + status dots) must always be there, or the menu can't be reached
+  if(!L.rows.some(r=>(r.items||[]).includes('grip'))){const k=L.rows.find(r=>r.type==='keys');if(k)k.items.splice(Math.min(1,k.items.length),0,'grip');else L.rows.unshift({type:'keys',items:['_','grip','_']})}
+}
+function reloadLayout(){
+  try{BRAND=R.brand?R.brand():'googletv'}catch(e){}
+  try{SUP=JSON.parse(R.supported?R.supported():'[]')}catch(e){SUP=[]}
+  loadLayout(R.layout?R.layout():'{"rows":[]}');
+  render();
+}
+window.reloadLayout=reloadLayout;
+
+/* ---------- rendering ---------- */
+function keyEl(name){
+  const c=CAT[name];
+  if(name==='grip'){const g=document.createElement('div');g.className='grip';g.id='grip';g.setAttribute('aria-label','Remote menu');g.innerHTML='<i></i><i class="st"></i><i></i>';return g}
+  if(name==='_'||!c){const s=document.createElement('div');s.className='spacer';return s}
+  if(name==='VOLUME'||name==='CHANNEL'){
+    const w=document.createElement('div');w.className='rocker-wrap';
+    const v=name==='VOLUME';
+    w.innerHTML=`<div class="rocker"><button data-b="${v?'VOL_UP':'CH_UP'}" data-rep aria-label="${v?'Volume up':'Channel up'}">${v?S('<path d="M12 5v14M5 12h14"/>'):'P+'}</button><button data-b="${v?'VOL_DOWN':'CH_DOWN'}" data-rep aria-label="${v?'Volume down':'Channel down'}">${v?S('<path d="M6 12h12"/>'):'P−'}</button></div>`+(v?'<div class="bubble" id="vol"></div>':'');
+    return w;
+  }
+  const b=document.createElement('button');
+  b.className='key'+(c.c?' '+c.c:'')+(c.t?' txt':'');b.setAttribute('aria-label',c.n);
+  b.innerHTML=c.i||c.t;
+  if(name==='MIC')b.id='mic';
+  else if(name==='KEYBOARD')b.dataset.kb='1';
+  else{b.dataset.b=name;if(c.rep)b.dataset.rep=''}
+  if(!c.sp&&SUP.length&&!SUP.includes(name)&&!editing)b.style.opacity=.35;
+  return b;
+}
+function pillEl(a){
+  const p=document.createElement('button');p.className='pill'+(a.style&&PILL[a.style]?' '+a.style:'');
+  p.innerHTML=a.style&&PILL[a.style]?PILL[a.style]:esc(a.name);
+  p.setAttribute('aria-label',a.name);
+  return p;
+}
+function render(){
+  const rows=$('#rows');rows.innerHTML='';
+  $('#remote').classList.toggle('editing',editing);
+  let hasPad=false;
+  L.rows.forEach((row,ri)=>{
+    let el;
+    if(row.type==='touchpad'){
+      hasPad=true;el=document.createElement('div');el.className='pad';el.id='pad';el.innerHTML='<div class="dot" id="dot"></div><div class="banner" id="banner" hidden></div>';
+      if(editing){el.dataset.i='pad';el.appendChild(xBtn(ri,-1))}
+    }else if(row.type==='apps'){
+      el=document.createElement('div');el.className='pills';
+      (row.items||[]).forEach((a,i)=>{const p=pillEl(a);p.dataset.i=i;if(editing)p.appendChild(xBtn(ri,i));else bindPill(p,a);el.appendChild(p)});
+      if(editing)el.appendChild(addBtn(ri,'apps',(row.items||[]).length));
+    }else{
+      el=document.createElement('div');el.className='keys';
+      (row.items||[]).forEach((name,i)=>{const k=keyEl(name);k.dataset.i=i;if(editing){if(name!=='grip')k.appendChild(xBtn(ri,i))}el.appendChild(k)});
+      if(editing)el.appendChild(addBtn(ri,'keys',(row.items||[]).length));
+    }
+    el.dataset.row=ri;rows.appendChild(el);
+  });
+  if(!hasPad){const b=document.createElement('div');b.className='banner floating';b.id='banner';b.hidden=true;rows.appendChild(b)}
+  if(editing){const a=document.createElement('button');a.className='addrow';a.textContent='+ Add a row';a.onclick=()=>openAddRow();rows.appendChild(a)}
+  if(!editing){
+    rows.querySelectorAll('[data-b]').forEach(bindKey);
+    rows.querySelectorAll('[data-kb]').forEach(k=>k.addEventListener('pointerup',()=>{R.haptic&&R.haptic();openTyper('Type on TV')}));
+    const pad=$('#pad');if(pad)bindPad(pad);
+    const mic=$('#mic');if(mic)bindMic(mic);
+  }else bindEditor();
+  bindGrip();
+  onState(lastState[0],lastState[1]);
+}
+
+/* ---------- buttons: tap = short press, hold = repeat (volume, channel, seek) or long press ---------- */
+function bindKey(b){
+  const k=b.dataset.b,rep=b.hasAttribute('data-rep');let hold=null,rt=null,longSent=false,active=false;
+  b.addEventListener('pointerdown',e=>{
+    e.preventDefault();b.setPointerCapture(e.pointerId);active=true;b.classList.add('down');R.haptic();longSent=false;
+    if(rep){send(k);hold=setTimeout(()=>{rt=setInterval(()=>{send(k);},140)},420)}
+    else hold=setTimeout(()=>{longSent=true;R.haptic();send(k,START_LONG)},550);
+  });
+  const end=e=>{
+    if(!active)return;active=false;b.classList.remove('down');clearTimeout(hold);clearInterval(rt);
+    if(rep)return;
+    if(longSent)send(k,END_LONG);else if(e.type==='pointerup')send(k);
+  };
+  b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);
+}
+
+/* ---------- app buttons: tap = open, hold = other version (if the layout gives one) ---------- */
+function bindPill(p,a){
+  let t=null,alt=false;
+  const ref=a[BRAND]||a.link||'';
+  p.addEventListener('pointerdown',e=>{e.preventDefault();p.classList.add('down');R.haptic();alt=false;
+    if(a.alt&&BRAND==='googletv')t=setTimeout(()=>{alt=true;R.haptic()},650)});
+  p.addEventListener('pointerup',()=>{clearTimeout(t);p.classList.remove('down');
+    if(!ref){toast(a.name+' isn’t set up for this TV.');return}
+    R.launch(alt?a.alt:ref);toast('Opening '+a.name+(alt?' (other version)':'')+'…',1300)});
+  p.addEventListener('pointercancel',()=>{clearTimeout(t);p.classList.remove('down')});
+}
+
+/* ---------- touchpad: swipe = arrows, tap = OK, hold = long OK ---------- */
+function bindPad(pad){
+  const dot=$('#dot'),STEP=34;
+  let sx,sy,ax,ay,t0,moved=false,steps=0,longT=null,longSent=false,down=false;
+  function place(x,y){const r=pad.getBoundingClientRect();const dx=Math.max(-r.width/2+14,Math.min(r.width/2-14,x-r.left-r.width/2)),dy=Math.max(-r.height/2+14,Math.min(r.height/2-14,y-r.top-r.height/2));dot.style.transform=`translate(${dx}px,${dy}px)`}
+  pad.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.banner'))return;
+    e.preventDefault();pad.setPointerCapture(e.pointerId);down=true;
+    sx=ax=e.clientX;sy=ay=e.clientY;t0=Date.now();moved=false;steps=0;longSent=false;dot.classList.add('live');place(e.clientX,e.clientY);
+    longT=setTimeout(()=>{if(!moved){longSent=true;R.haptic();send('OK',START_LONG)}},550);
+  });
+  pad.addEventListener('pointermove',e=>{
+    if(!down)return;place(e.clientX,e.clientY);
+    const dx=e.clientX-ax,dy=e.clientY-ay;
+    if(Math.abs(e.clientX-sx)>9||Math.abs(e.clientY-sy)>9){if(!moved){moved=true;clearTimeout(longT)}}
+    if(longSent)return;
+    if(Math.abs(dx)>=STEP||Math.abs(dy)>=STEP){
+      let k;if(Math.abs(dx)>Math.abs(dy)){k=dx>0?'RIGHT':'LEFT';ax+=Math.sign(dx)*STEP;ay=e.clientY}else{k=dy>0?'DOWN':'UP';ay+=Math.sign(dy)*STEP;ax=e.clientX}
+      send(k);R.haptic();steps++;
+    }
+  });
+  const up=e=>{
+    if(!down)return;down=false;clearTimeout(longT);dot.classList.remove('live');dot.style.transform='';
+    if(longSent){send('OK',END_LONG);return}
+    if(e.type!=='pointerup')return;
+    const dt=Date.now()-t0,dx=e.clientX-sx,dy=e.clientY-sy;
+    if(!moved){send('OK');R.haptic();const r=pad.getBoundingClientRect(),rp=document.createElement('div');rp.className='ripple';rp.style.left=(e.clientX-r.left)+'px';rp.style.top=(e.clientY-r.top)+'px';pad.appendChild(rp);setTimeout(()=>rp.remove(),400)}
+    else if(steps===0&&dt<300&&Math.hypot(dx,dy)>18){send(Math.abs(dx)>Math.abs(dy)?(dx>0?'RIGHT':'LEFT'):(dy>0?'DOWN':'UP'));R.haptic()}
+  };
+  pad.addEventListener('pointerup',up);pad.addEventListener('pointercancel',up);
+}
+
+/* ---------- voice: tap = listen until you stop talking, hold = talk while held ---------- */
+let listening=false;
+function bindMic(mic){
+  let t0=0;
+  mic.addEventListener('pointerdown',e=>{e.preventDefault();mic.setPointerCapture(e.pointerId);mic.classList.add('down');R.haptic();
+    if(listening){R.voice(false);return}t0=Date.now();R.voice(true)});
+  mic.addEventListener('pointerup',()=>{mic.classList.remove('down');if(listening&&Date.now()-t0>600)R.voice(false)});
+  mic.addEventListener('pointercancel',()=>mic.classList.remove('down'));
+}
+window.onVoice=(s,msg)=>{
+  listening=s==='listening';const mic=$('#mic');if(mic)mic.classList.toggle('listening',listening);
+  if(s==='listening')toast('Listening… speak now',1500);
+  else if(s==='heard')toast('Searching: '+msg,2200);
+  else if(s==='unsupported')toast(msg||'The TV didn’t start voice search. Try the keyboard in the ••• menu.',3500);
+  else if(s==='noperm')toast('Allow the microphone in TVs & settings first.',3000);
+  else if(s==='error')toast(msg||'Voice stopped.',2500);
+};
+
+/* ---------- grip: tap = menu, swipe right = hide ---------- */
+const menu=$('#menu');
+function bindGrip(){
+  const g=$('#grip');if(!g)return;let sx=0,dn=false;
+  if(editing)return; // in edit mode the grip is just something you can move
+  g.addEventListener('pointerdown',e=>{e.preventDefault();g.setPointerCapture(e.pointerId);sx=e.clientX;dn=true});
+  g.addEventListener('pointerup',e=>{if(!dn)return;dn=false;const dx=e.clientX-sx;
+    if(dx>40){R.hide();return}
+    R.haptic();menu.hidden=!menu.hidden;$('#typer').hidden=true});
+}
+menu.addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;menu.hidden=true;
+  const m=b.dataset.m;
+  if(m==='type')openTyper('Type on TV');
+  else if(m==='edit')startEdit();
+  else if(m==='layouts')openLayouts();
+  else if(m==='reconnect'){R.reconnect();toast('Reconnecting…')}
+  else if(m==='setup')R.setup();else if(m==='hide')R.hide()});
+document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!e.target.closest('#menu')&&!e.target.closest('#grip'))menu.hidden=true},true);
+
+/* ---------- typing ---------- */
+const typer=$('#typer'),tin=$('#typeIn');
+function openTyper(label){$('#typeLabel').textContent=label||'Type on TV';typer.hidden=false;R.focusable(true);setTimeout(()=>{tin.focus()},120)}
+function closeTyper(){typer.hidden=true;tin.blur();R.focusable(false)}
+$('#tSend').addEventListener('click',()=>{const v=tin.value;if(v){R.text(v);send('ENTER');toast('Sent to TV');tin.value=''}closeTyper()});
+$('#tDel').addEventListener('click',()=>send('DEL'));
+$('#tClose').addEventListener('click',closeTyper);
+tin.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#tSend').click()}});
+window.onText=label=>{if(typer.hidden&&!editing)openTyper(label||'The TV wants text')};
+
+/* ---------- layouts ---------- */
+function openLayouts(){
+  let list=[];try{list=JSON.parse(R.layouts())}catch(e){}
+  $('#layoutList').innerHTML=list.map(l=>`<button class="item${l.current?' on':''}" data-l="${esc(l.id)}">${esc(l.name)}${l.current?' ✓':''}</button>`).join('');
+  $('#layoutSheet').hidden=false;
+}
+$('#layoutList').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(!b)return;
+  loadLayout(R.useLayout(b.dataset.l));$('#layoutSheet').hidden=true;render();toast('Layout: '+b.textContent.replace(' ✓',''))});
+$('#lClose').onclick=()=>$('#layoutSheet').hidden=true;
+
+/* ---------- editor: hold to move, ✕ to remove, + to add ---------- */
+let before=null;
+function startEdit(){before=JSON.stringify(L);editing=true;menu.hidden=true;render();toast('Hold a button to move it · ✕ removes · + adds',3000)}
+function endEdit(save){
+  if(save){L.rows=L.rows.filter(r=>r.type==='touchpad'||(r.items&&r.items.length));R.saveLayout(JSON.stringify(L));toast('Saved as My layout')}
+  else loadLayout(before);
+  editing=false;$('#picker').hidden=true;render();
+}
+$('#eDone').onclick=()=>endEdit(true);
+$('#eCancel').onclick=()=>endEdit(false);
+$('#eLayouts').onclick=()=>openLayouts();
+
+function xBtn(ri,i){
+  const x=document.createElement('button');x.className='x';x.textContent='✕';x.setAttribute('aria-label','Remove');
+  x.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault()});
+  x.addEventListener('pointerup',e=>{e.stopPropagation();
+    if(i<0)L.rows.splice(ri,1);else L.rows[ri].items.splice(i,1);
+    R.haptic&&R.haptic();render()});
+  return x;
+}
+function addBtn(ri,kind,n){
+  const a=document.createElement('button');a.className='add';a.dataset.i=n;a.textContent='+';a.setAttribute('aria-label','Add');
+  a.addEventListener('pointerup',()=>kind==='apps'?pickApp(ri):pickKey(ri));
+  return a;
+}
+function chip(label,icon){return `<span class="ic">${icon}</span>${esc(label)}`}
+function pickKey(ri){
+  const names=Object.keys(CAT).filter(n=>CAT[n].sp||!SUP.length||SUP.includes(n));
+  const special=names.filter(n=>CAT[n].sp),keys=names.filter(n=>!CAT[n].sp);
+  const html=list=>'<div class="chips">'+list.map(n=>`<button class="chip" data-k="${n}">${chip(CAT[n].n,CAT[n].i||CAT[n].t)}</button>`).join('')+'</div>';
+  $('#pickTitle').textContent='Add a button';
+  $('#pickBody').innerHTML='<p class="note">Extras</p>'+html(special)+'<p class="note">Buttons this TV understands</p>'+html(keys);
+  $('#pickBody').onclick=e=>{const c=e.target.closest('[data-k]');if(!c)return;L.rows[ri].items.push(c.dataset.k);$('#picker').hidden=true;render()};
+  $('#picker').hidden=false;
+}
+function pickApp(ri){
+  $('#pickTitle').textContent='Add an app';
+  $('#pickBody').innerHTML='<p class="note">Asking the TV…</p>';
+  $('#pickBody').onclick=e=>{const c=e.target.closest('[data-ref]');if(!c)return;
+    const a={name:c.dataset.name};a[BRAND]=c.dataset.ref;L.rows[ri].items.push(a);$('#picker').hidden=true;render()};
+  window.onApps=list=>{$('#pickBody').innerHTML=list.length?list.map(a=>`<button class="item" data-ref="${esc(a.ref)}" data-name="${esc(a.name)}">${esc(a.name)}</button>`).join(''):'<p class="note">No apps found.</p>'};
+  $('#picker').hidden=false;R.apps();
+}
+function openAddRow(){
+  const hasPad=L.rows.some(r=>r.type==='touchpad');
+  $('#pickTitle').textContent='Add a row';
+  $('#pickBody').innerHTML=`<button class="item" data-r="keys">Row of buttons</button><button class="item" data-r="apps">Row of app buttons</button>${hasPad?'':'<button class="item" data-r="touchpad">Touchpad</button>'}`;
+  $('#pickBody').onclick=e=>{const c=e.target.closest('[data-r]');if(!c)return;const t=c.dataset.r;
+    L.rows.push(t==='touchpad'?{type:'touchpad'}:{type:t,items:[]});$('#picker').hidden=true;render();$('#remote').scrollTop=1e6};
+  $('#picker').hidden=false;
+}
+$('#pClose').onclick=()=>$('#picker').hidden=true;
+
+function bindEditor(){
+  document.querySelectorAll('#rows [data-i]:not(.add)').forEach(el=>{
+    let t=null,lifted=false,ghost=null,sx=0,sy=0,dx0=0,dy0=0,target=null,after=false;
+    const isPad=el.dataset.i==='pad';
+    const row=isPad?+el.dataset.row:+el.parentElement.dataset.row;
+    el.addEventListener('pointerdown',e=>{
+      if(e.target.closest('.x'))return;
+      e.preventDefault();el.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;
+      t=setTimeout(()=>{lifted=true;R.haptic&&R.haptic();const r=el.getBoundingClientRect();dx0=sx-r.left;dy0=sy-r.top;
+        ghost=el.cloneNode(true);ghost.classList.add('ghost');ghost.style.width=r.width+'px';ghost.style.height=r.height+'px';ghost.style.left=r.left+'px';ghost.style.top=r.top+'px';
+        document.body.appendChild(ghost);el.classList.add('lifted')},300);
+    });
+    el.addEventListener('pointermove',e=>{
+      if(!lifted){if(Math.hypot(e.clientX-sx,e.clientY-sy)>10)clearTimeout(t);return}
+      ghost.style.left=(e.clientX-dx0)+'px';ghost.style.top=(e.clientY-dy0)+'px';
+      // auto-scroll near the edges while editing
+      const rem=$('#remote'),rr=rem.getBoundingClientRect();if(e.clientY<rr.top+40)rem.scrollTop-=12;else if(e.clientY>rr.bottom-40)rem.scrollTop+=12;
+      if(target)target.classList.remove('drop-before','drop-after');
+      const under=document.elementFromPoint(e.clientX,e.clientY);
+      target=under&&(isPad?under.closest('#rows>[data-row]'):under.closest('#rows [data-i]:not(.pad)'));
+      if(target===el)target=null;
+      if(target){const r=target.getBoundingClientRect();
+        const vertical=isPad||target.parentElement.classList.contains('pills');
+        after=vertical?e.clientY>r.top+r.height/2:e.clientX>r.left+r.width/2;
+        target.classList.add(after?'drop-after':'drop-before')}
+    });
+    const finish=()=>{
+      clearTimeout(t);if(!lifted)return;lifted=false;el.classList.remove('lifted');if(ghost)ghost.remove();
+      if(!target)return;target.classList.remove('drop-before','drop-after');
+      if(isPad){const from=row,to=+target.dataset.row;const [it]=L.rows.splice(from,1);let at=to+(after?1:0);if(from<at)at--;L.rows.splice(at,0,it);render();return}
+      const from=row,fi=+el.dataset.i,toRow=+target.parentElement.dataset.row,ti=+target.dataset.i;
+      const src=L.rows[from],dst=L.rows[toRow];
+      if((src.type==='apps')!==(dst.type==='apps')){toast(src.type==='apps'?'App buttons go in an app row.':'Buttons go in a button row.');render();return}
+      const [it]=src.items.splice(fi,1);let at=ti+(after&&!target.classList.contains('add')?1:0);if(from===toRow&&fi<at)at--;dst.items.splice(at,0,it);R.haptic&&R.haptic();render();
+    };
+    el.addEventListener('pointerup',finish);el.addEventListener('pointercancel',finish);
+  });
+}
+
+/* ---------- connection state ---------- */
+window.onState=(s,detail)=>{
+  lastState=[s,detail];
+  const grip=$('#grip'),banner=$('#banner');
+  if(grip)grip.className='grip '+(s==='connected'?'ok':s==='connecting'?'busy':'bad');
+  if(!banner)return;
+  if(s==='connected'||editing){banner.hidden=true;return}
+  banner.hidden=false;
+  if(s==='connecting')banner.innerHTML='Connecting to your TV…';
+  else if(s==='needs_pairing'||s==='nohost')banner.innerHTML=`${s==='nohost'?'No TV set up yet.':'This phone isn’t paired with the TV.'}<button id="bSetup">Set up</button>`;
+  else banner.innerHTML=`Can’t reach the TV.<small>${esc(detail||'Check it’s on and on the same Wi-Fi.')}</small><button id="bRetry">Try again</button>`;
+  const a=$('#bSetup'),b=$('#bRetry');if(a)a.onclick=()=>R.setup();if(b)b.onclick=()=>{R.reconnect();};
+};
+let volT;
+window.onVolume=(lvl,max,muted)=>{const txt=muted?'Muted':(max?Math.round(lvl*100/max):lvl)+'%';const v=$('#vol');
+  if(!v){toast('Volume '+txt,1000);return}v.textContent=txt;v.classList.add('on');clearTimeout(volT);volT=setTimeout(()=>v.classList.remove('on'),1300)};
+window.onShown=()=>{menu.hidden=true};
+
+reloadLayout();
+try{const st=JSON.parse(R.state());onState(st.state,st.detail)}catch(e){onState('offline','')}
+/* window mode (Chromebook): keep the remote's shape and scale it to fit the window */
+if(WIN){
+  document.documentElement.classList.add('win');
+  const vp=document.querySelector('meta[name=viewport]');vp.setAttribute('content','width=device-width, initial-scale=1, user-scalable=no');
+  const el=document.getElementById('remote'),NEED=900;
+  const fit=()=>{const s=Math.min(innerWidth/316,innerHeight/NEED);el.style.zoom=s;el.style.width='300px';el.style.height=(innerHeight/s-16)+'px';
+    el.style.left=((innerWidth/s-300)/2)+'px';el.style.top='8px';el.style.right='auto';el.style.bottom='auto'};
+  addEventListener('resize',fit);fit();
+}
+})();
+</script>
+</body></html>

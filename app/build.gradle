@@ -1,0 +1,40 @@
+plugins { id 'com.android.application' }
+
+// Release signing: keystore.properties (not in git) holds storeFile, storePassword, keyAlias, keyPassword.
+def ks = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ks.load(it) }
+
+android {
+  namespace 'com.remotemate'
+  compileSdk 36
+  defaultConfig {
+    applicationId 'com.remotemate.app'
+    minSdk 33
+    targetSdk 36
+    versionCode 1
+    versionName '1.0'
+  }
+  signingConfigs {
+    if (ksFile.exists()) {
+      upload { storeFile rootProject.file(ks['storeFile']); storePassword ks['storePassword']; keyAlias ks['keyAlias']; keyPassword ks['keyPassword'] }
+    }
+  }
+  buildTypes {
+    release {
+      minifyEnabled true
+      shrinkResources true
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      if (ksFile.exists()) signingConfig signingConfigs.upload
+    }
+  }
+  androidResources { localeFilters += ['en'] }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  packaging { resources { excludes += ['META-INF/**', 'kotlin/**', '**.kotlin_builtins', 'DebugProbesKt.bin'] } }
+  dependenciesInfo { includeInApk false; includeInBundle true }
+}
+
+dependencies {
+  // On-device text reading for the "photo of your TV" fallback. Uses the model inside Google Play services, so it adds little to the APK.
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.2'
+}

@@ -1,0 +1,208 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RemoteMate</title>
+<style>
+/* One narrow column of cards, dark like the remote itself. Thin line icons. */
+:root{--bg:#17191a;--card:#232627;--card2:#2d3031;--ink:#f4f4f2;--muted:#a3a7a8;--line:#3a3e3f;--ok:#3ccf6e;--warn:#f2b33d;--red:#f0284a;--btn:#f4f4f2;--btn-ink:#17191a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Roboto","Helvetica Neue",Arial,sans-serif;font-size:16px;line-height:1.45}
+main{max-width:560px;margin:0 auto;padding:22px 16px 40px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:26px;margin:4px 2px 0;font-weight:600;display:flex;align-items:center;gap:10px}
+h1 svg{width:30px;height:30px}
+.lead{color:var(--muted);margin:0 2px 6px}
+.card{background:var(--card);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0;font-size:18px;font-weight:600;display:flex;align-items:center;gap:10px}
+.card h2 .n{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:14px}
+.card h2 .n.done{background:var(--ok);border-color:var(--ok);color:#0d2a17}
+.perm{display:flex;align-items:center;gap:12px}
+.perm div{flex:1;min-width:0}
+.perm small{display:block;color:var(--muted);font-size:13px}
+.tick{color:var(--ok);font-weight:700;font-size:14px}
+button{font:inherit;border:0;border-radius:14px;padding:11px 16px;font-weight:600;background:var(--card2);color:var(--ink)}
+button.go{background:var(--btn);color:var(--btn-ink)}
+button:active{filter:brightness(1.2)}
+button:disabled{opacity:.45}
+.tvs{display:flex;flex-direction:column;gap:8px}
+.tv{display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:14px;padding:12px;text-align:left;font-weight:400;width:100%}
+.tv b{display:block;font-weight:600}
+.tv small{color:var(--muted)}
+.tv span{flex:1;min-width:0}
+.tv svg{width:30px;height:30px;flex:none;fill:none;stroke:currentColor;stroke-width:1.4}
+.tv.cur{box-shadow:inset 0 0 0 1.5px var(--ok)}
+.tv.off{opacity:.55}
+.tv .forget{background:transparent;color:var(--muted);padding:6px 10px;font-size:18px}
+.brand{display:inline-block;font-style:normal;font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:1px 8px;margin-left:6px;color:var(--muted)}
+.brand.googletv{color:#8ab4f8;border-color:#3b4f6e}.brand.roku{color:#c79bff;border-color:#4e3b6e}
+.rowin{display:flex;gap:8px}
+input{flex:1;min-width:0;font:inherit;font-size:17px;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+input:focus{outline:none;border-color:var(--ink)}
+#code{font-size:26px;letter-spacing:6px;text-transform:uppercase;text-align:center;font-family:"Roboto Mono",monospace}
+.msg{font-size:14px;color:var(--muted);margin:0}
+.msg.bad{color:#ff8a9a}
+.msg.good{color:#9be7b4}
+.big{display:flex;gap:10px;flex-wrap:wrap}
+.big button{flex:1 1 140px;display:flex;align-items:center;justify-content:center;gap:8px}
+.big button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6}
+.sub{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.tips{margin:0;padding-left:20px;color:var(--muted);font-size:14px}
+.tips li+li{margin-top:6px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+.foot{font-size:13px;color:var(--muted);text-align:center}
+.foot a{color:var(--muted)}
+svg{stroke-linecap:round;stroke-linejoin:round}
+[hidden]{display:none!important}
+</style></head>
+<body><main>
+<h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="7.5" y="7.5" width="9" height="14.5" rx="2.5"/><circle cx="12" cy="12" r="1.8"/><path d="M10.5 18.5h3"/><path d="M9.5 4.3a3.6 3.6 0 0 1 5 0M7.6 2.4a6.2 6.2 0 0 1 8.8 0" stroke="#3ccf6e"/></svg>RemoteMate</h1>
+<p class="lead">A remote for your smart TV over Wi-Fi. Works with Google TV, Android TV and Roku. Samsung, LG and Fire TV are coming.</p>
+
+<section class="card">
+  <h2><span class="n" id="n1">1</span>Your TV</h2>
+  <div class="tvs" id="saved"></div>
+  <div id="findBox">
+    <p class="msg" id="findMsg"><span class="spin"></span>Looking for TVs on your Wi-Fi…</p>
+    <div class="tvs" id="tvs" style="margin-top:8px"></div>
+  </div>
+  <div id="codeBox" hidden>
+    <p class="msg" id="codeMsg">A code is showing on your TV. Type it here:</p>
+    <input id="code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••">
+    <div class="rowin" style="margin-top:8px"><button id="bCancel">Cancel</button><button class="go" id="bCode" style="flex:1">Pair</button></div>
+  </div>
+  <p class="msg" id="pairMsg" hidden></p>
+  <div class="sub" id="helpBox">
+    <p class="msg">Can’t see your TV? Take a photo of its <b>Settings › About</b> screen (or the sticker on the back). The phone reads the brand. Nothing leaves your phone.</p>
+    <div class="big">
+      <button id="bPhoto"><svg viewBox="0 0 24 24"><path d="M3.5 8.5a2 2 0 0 1 2-2h2.3l1.6-2h5.2l1.6 2h2.3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.8" r="3.6"/></svg>Take photo</button>
+      <button id="bPick"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 15.5l-5-5-9 9"/></svg>Choose photo</button>
+    </div>
+    <p class="msg" id="photoMsg" hidden></p>
+    <p class="msg">Or type the TV’s IP address (TV Settings › Network):</p>
+    <div class="rowin"><input id="ip" inputmode="decimal" placeholder="e.g. 192.168.1.23" autocomplete="off"><button id="bIp">Connect</button></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2><span class="n" id="n2">2</span>Permissions</h2>
+  <div class="perm"><div>Show over other apps<small>So the remote can slide in over anything.</small></div><span class="tick" id="okOverlay" hidden>✓ On</span><button id="bOverlay">Allow</button></div>
+  <div class="perm"><div>Microphone<small>For the voice button. On Google TV your voice goes straight to the TV.</small></div><span class="tick" id="okMic" hidden>✓ On</span><button id="bMic">Allow</button></div>
+  <div class="perm"><div>Notification<small>Keeps the remote ready in the background.</small></div><span class="tick" id="okNotif" hidden>✓ On</span><button id="bNotif">Allow</button></div>
+</section>
+
+<section class="card">
+  <h2><span class="n">3</span>Use it</h2>
+  <div class="big"><button class="go" id="bShow">Show remote</button><button id="bWin">Open in a window</button><button id="bTile">Add quick settings tile</button></div>
+  <p class="msg" id="cbTip" hidden>On a Chromebook the remote opens as its own window. Your keyboard works too: arrows to move, Enter = OK, Esc = Back, Space = play/pause, + / − volume, M mute, H home.</p>
+  <ul class="tips">
+    <li><b>Open:</b> swipe left on the thin bar at the right edge of the screen (or tap it).</li>
+    <li><b>Move the bar:</b> hold it, then drag up or down.</li>
+    <li><b>Close:</b> swipe right on the three dots at the top of the remote, or tap the bar again.</li>
+    <li><b>Touchpad:</b> swipe to move, tap for OK, hold for a long press.</li>
+    <li><b>Voice:</b> tap the mic and talk, or hold it while you talk.</li>
+    <li><b>Change buttons:</b> three dots › Edit buttons. Hold to move, ✕ to remove, + to add.</li>
+    <li><b>Typing:</b> three dots › Type on TV.</li>
+  </ul>
+  <div class="big"><button id="bReset">Reset size &amp; position</button><button id="bStop">Turn remote off</button></div>
+</section>
+<p class="foot">Voice and photos stay on your phone and home Wi-Fi. Nothing is sent to us.<br><a href="#" id="lic">Open-source licences</a></p>
+</main>
+<script>
+const S=window.Setup;const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const BN={googletv:'Google TV',roku:'Roku',samsung:'Samsung',lg:'LG webOS',firetv:'Fire TV',sony:'Sony',other:'Other'};
+const TVIC='<svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="12.5" rx="1.5"/><path d="M8 20.5h8"/></svg>';
+let pending=null,finding=false,status={tvs:[]};
+const found={}; // host → tv (best brand wins)
+const RANK={googletv:5,roku:5,firetv:3,samsung:3,lg:3,sony:2,other:1};
+
+function refresh(){
+  status=JSON.parse(S.status());const st=status;
+  $('#okOverlay').hidden=!st.overlay;$('#bOverlay').hidden=st.overlay;
+  $('#okMic').hidden=!st.mic;$('#bMic').hidden=st.mic;
+  $('#okNotif').hidden=!st.notif;$('#bNotif').hidden=st.notif;
+  $('#n2').classList.toggle('done',st.overlay);$('#n2').textContent=st.overlay?'✓':'2';
+  const has=st.tvs.length>0;
+  $('#n1').classList.toggle('done',has);$('#n1').textContent=has?'✓':'1';
+  $('#saved').innerHTML=st.tvs.map(t=>`<div class="tv${t.id===st.current?' cur':''}" data-use="${esc(t.id)}">${TVIC}<span><b>${esc(t.name)}<i class="brand ${esc(t.brand)}">${esc(BN[t.brand]||t.brand)}</i></b><small>${t.id===st.current?'In use · ':'Tap to use · '}${esc(t.host)}</small></span><button class="forget" data-forget="${esc(t.id)}" aria-label="Forget">✕</button></div>`).join('');
+  $('#bStop').disabled=!st.running;
+  drawFound();
+  if($('#codeBox').hidden)startFind();
+}
+function startFind(){if(finding)return;finding=true;$('#findBox').hidden=false;S.find();
+  setTimeout(()=>{if(!Object.keys(found).length)$('#findMsg').textContent='No new TVs found. Check the TV is on and on the same Wi-Fi, or use a photo or the IP address below.'},9000)}
+function isSaved(t){return status.tvs.some(s=>s.host===t.host&&s.brand===t.brand)}
+function drawFound(){
+  const list=Object.values(found).filter(t=>!isSaved(t));
+  if(Object.keys(found).length)$('#findMsg').textContent=list.length?'Tap your TV:':'Searching… (your saved TVs are above)';
+  list.sort((a,b)=>(b.supported-a.supported));
+  $('#tvs').innerHTML=list.map(t=>`<button class="tv${t.supported?'':' off'}" data-h="${esc(t.host)}">${TVIC}<span><b>${esc(t.name)}<i class="brand ${esc(t.brand)}">${esc(t.brandName||BN[t.brand])}</i></b><small>${t.supported?esc(t.host):'Coming in a later version · '+esc(t.host)}</small></span></button>`).join('');
+}
+function onFound(t){
+  const old=found[t.host];
+  if(old&&(RANK[old.brand]||0)>=(RANK[t.brand]||0))return;
+  found[t.host]=t;drawFound();
+}
+function paused(){finding=false}
+function onFindError(m){$('#findMsg').textContent=m}
+
+/* ---------- pairing: the fastest way each brand allows ---------- */
+function startPair(t){
+  if(!t.supported){say(`${t.brandName||BN[t.brand]} TVs are coming in a later version.`,'bad');return}
+  pending=t;finding=false;S.stopFind();
+  if(t.brand==='googletv'){
+    $('#findBox').hidden=true;$('#helpBox').hidden=true;$('#codeBox').hidden=false;$('#pairMsg').hidden=true;
+    $('#codeMsg').innerHTML='<span class="spin"></span>Asking the TV for a code…';$('#codeMsg').className='msg';$('#code').value='';$('#bCode').disabled=true;
+  }else say('<span class="spin"></span>Connecting to '+esc(t.name)+'…');
+  S.pair(t.brand,t.host,t.name);
+}
+function say(html,cls){const m=$('#pairMsg');m.hidden=false;m.innerHTML=html;m.className='msg'+(cls?' '+cls:'')}
+function onPair(step,msg){
+  if(step==='code'){$('#codeMsg').textContent='A 6-character code is showing on your TV. Type it here:';$('#bCode').disabled=false;$('#code').focus()}
+  else if(step==='error'){
+    if(pending&&pending.brand==='googletv'){$('#codeMsg').textContent=msg;$('#codeMsg').className='msg bad';$('#bCode').disabled=true}
+    else say(esc(msg),'bad');
+  }
+  else if(step==='badcode'){$('#codeMsg').textContent=msg;$('#codeMsg').className='msg bad';$('#bCode').disabled=false;
+    if(/start pairing again|said no/i.test(msg))setTimeout(()=>startPair(pending),1500)}
+  else if(step==='done'){$('#codeBox').hidden=true;$('#helpBox').hidden=false;say('✓ Connected to '+esc(pending?pending.name:'your TV')+'. Your remote is ready.','good');pending=null;finding=false;refresh()}
+}
+document.addEventListener('click',e=>{
+  const f=e.target.closest('[data-forget]');if(f){e.stopPropagation();S.forget(f.dataset.forget);return}
+  const u=e.target.closest('[data-use]');if(u){S.use(u.dataset.use);return}
+  const t=e.target.closest('[data-h]');if(t)startPair(found[t.dataset.h]);
+});
+$('#bIp').onclick=()=>{const v=$('#ip').value.trim();if(!v)return;say('<span class="spin"></span>Checking '+esc(v)+'…');S.probe(v)};
+function onProbe(t,host){
+  if(!t){say('Nothing answered at '+esc(host)+'. Check the address, and that the TV is on.','bad');return}
+  found[t.host]=t;drawFound();startPair(t);
+}
+$('#bCode').onclick=()=>{const c=$('#code').value.trim();if(c.length===6){$('#bCode').disabled=true;$('#codeMsg').innerHTML='<span class="spin"></span>Checking…';$('#codeMsg').className='msg';S.code(c)}};
+$('#code').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^0-9A-F]/g,'');if(e.target.value.length===6)$('#bCode').click()});
+$('#bCancel').onclick=()=>{S.cancelPair();$('#codeBox').hidden=true;$('#helpBox').hidden=false;finding=false;startFind()};
+
+/* ---------- photo fallback ---------- */
+$('#bPhoto').onclick=()=>S.photo();$('#bPick').onclick=()=>S.pickPhoto();
+function onPhoto(r,msg){
+  const m=$('#photoMsg');m.hidden=false;m.className='msg';
+  if(r==='reading'){m.innerHTML='<span class="spin"></span>Reading the photo…';return}
+  if(!r){if(msg){m.textContent=msg;m.className='msg bad'}else m.hidden=true;return}
+  if(!r.platform){m.textContent='Couldn’t see a brand in that photo. Try a clear, straight photo of Settings › About.';m.className='msg bad';return}
+  const what=r.label||r.brandName;
+  if(!r.supported){m.textContent=`Looks like ${what}. That brand is coming in a later version.`;m.className='msg bad';return}
+  // supported: use the IP from the photo, or a TV of that brand we already found, or ask for the IP
+  const same=Object.values(found).filter(t=>t.brand===r.platform);
+  if(r.ip){m.textContent=`Looks like ${what} at ${r.ip}. Connecting…`;$('#ip').value=r.ip;S.probe(r.ip);return}
+  if(same.length===1){m.textContent=`Looks like ${what}. Connecting to ${same[0].name}…`;startPair(same[0]);return}
+  m.innerHTML=`Looks like <b>${esc(what)}</b>. Now type its IP address below (TV Settings › Network), or take a photo of that screen.`;m.className='msg good';$('#ip').focus();
+}
+
+$('#bOverlay').onclick=()=>S.askOverlay();$('#bMic').onclick=()=>S.askMic();$('#bNotif').onclick=()=>S.askNotif();
+$('#bShow').onclick=()=>S.show();$('#bWin').onclick=()=>S.window();
+if(S.chromebook&&S.chromebook()){$('#cbTip').hidden=false;$('#bTile').hidden=true;$('#bShow').textContent='Open remote';$('#bWin').hidden=true}
+$('#bStop').onclick=()=>S.stop();$('#bTile').onclick=()=>S.addTile();
+$('#bReset').onclick=()=>{S.resetSize();$('#bReset').textContent='Reset ✓'};
+$('#lic').onclick=e=>{e.preventDefault();S.licences()};
+refresh();
+</script>
+</body></html>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  <uses-feature android:name="android.hardware.microphone" android:required="false" />
+  <queries>
+    <intent><action android:name="android.speech.RecognitionService" /></intent>
+    <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+  </queries>
+  <application android:label="RemoteMate" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
+      android:theme="@style/AppTheme" android:resizeableActivity="true" android:usesCleartextTraffic="true"
+      android:networkSecurityConfig="@xml/network" android:allowBackup="false" android:enableOnBackInvokedCallback="true">
+    <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr" />
+    <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
+        android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden|uiMode"
+        android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <activity android:name=".RemoteActivity" android:exported="false" android:resizeableActivity="true"
+        android:theme="@style/AppTheme" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboardHidden|keyboard|navigation|uiMode"
+        android:windowSoftInputMode="adjustResize">
+      <layout android:defaultWidth="340dp" android:defaultHeight="860dp" android:minWidth="240dp" android:minHeight="520dp" />
+    </activity>
+    <service android:name=".RemoteService" android:exported="false" android:foregroundServiceType="specialUse|microphone">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Floating TV remote panel shown over other apps" />
+    </service>
+    <service android:name=".RemoteTile" android:exported="true" android:label="RemoteMate" android:icon="@drawable/ic_stat"
+        android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+      <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+      <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+    </service>
+    <provider android:name=".PhotoProvider" android:authorities="${applicationId}.photo" android:exported="false" android:grantUriPermissions="true" />
+  </application>
+</manifest>

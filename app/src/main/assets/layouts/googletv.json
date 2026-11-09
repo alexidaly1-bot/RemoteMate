@@ -1,0 +1,10 @@
+{"name":"Google TV","brand":"googletv","rows":[
+  {"type":"keys","items":["MUTE","grip","POWER"]},
+  {"type":"apps","items":[
+    {"name":"YouTube","googletv":"market://launch?id=com.google.android.youtube.tv","roku":"837"},
+    {"name":"Netflix","googletv":"market://launch?id=com.netflix.ninja","roku":"12"},
+    {"name":"Prime Video","googletv":"market://launch?id=com.amazon.amazonvideo.livingroom","roku":"13"}]},
+  {"type":"keys","items":["INPUT","PROFILE","CH_UP","KEYBOARD","PLAY_PAUSE","CH_DOWN","MIC","VOLUME","LIVE_TV","REWIND","FFWD"]},
+  {"type":"touchpad"},
+  {"type":"keys","items":["BACK","HOME","SETTINGS"]}
+]}
