@@ -1,0 +1,10 @@
+{"name":"Alex's layout","brand":"googletv","rows":[
+  {"type":"keys","items":["MUTE","grip","POWER"]},
+  {"type":"apps","items":[
+    {"name":"SmartTube","style":"st","googletv":"market://launch?id=com.teamsmart.videomanager.tv","alt":"market://launch?id=com.liskovsoft.smarttubetv.beta"},
+    {"name":"Prime Video","style":"pr","googletv":"market://launch?id=com.amazon.amazonvideo.livingroom","alt":"https://app.primevideo.com","roku":"13"},
+    {"name":"BrowseHere","style":"bh","googletv":"market://launch?id=com.tcl.browser"}]},
+  {"type":"keys","items":["INPUT","PROFILE","CH_UP","USB","PLAY_PAUSE","CH_DOWN","MIC","VOLUME","LIVE_TV","REWIND","FFWD"]},
+  {"type":"touchpad"},
+  {"type":"keys","items":["BACK","HOME","SETTINGS"]}
+]}
